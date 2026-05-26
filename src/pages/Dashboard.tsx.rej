@@ -1,0 +1,8 @@
+@@ -1,6 +1,7 @@
+ import { useState, useEffect } from 'react'
+ import type { Message } from '../types'
++import { Header } from '../components/layout/Header'
+ import { PageLayout } from '../components/layout/PageLayout'
+ import { MessageList } from '../components/features/MessageList'
+ import { StatCard } from '../components/features/StatCard'
+ 
