@@ -1,0 +1,40 @@
+.session-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.session-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.session-card-title {
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.session-card-preview {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.session-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-1);
+}
+
+.session-card-meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}

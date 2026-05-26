@@ -1,0 +1,25 @@
+.input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-base);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  transition: all var(--duration-fast) ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.input-error {
+  border-color: var(--color-error);
+}

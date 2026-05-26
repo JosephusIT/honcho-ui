@@ -1,0 +1,22 @@
+.message-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.message-list-skeleton {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.message-list-empty {
+  text-align: center;
+  padding: var(--space-12) var(--space-6);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
