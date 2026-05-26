@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageSquare, Users, Activity, Zap } from 'lucide-react';
-import { Card } from '../components/ui/Card';
+import { Card, Badge } from '../components/ui';
 import { getStats } from '../lib/api';
 import type { WorkspaceStats } from '../types';
 
