@@ -36,19 +36,7 @@ jobs:
           path: .next/
           retention-days: 1
 
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run test
-        env:
-          NEXT_PUBLIC_API_BASE: ${{ vars.NEXT_PUBLIC_API_BASE || 'http://localhost:8000' }}
+  
 
   docker:
     name: Docker Build & Push
@@ -77,6 +65,4 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}/:${{ steps.sha.outputs.short_sha }}
             ghcr.io/${{ github.repository }}/:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           provenance: false

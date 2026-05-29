@@ -37,7 +37,6 @@ const navItems = [
         <path d="M22 20c0-2.2-1.8-4-4-4" />
       </svg>
     ),
-    active: true,
   },
   {
     href: '/memory',

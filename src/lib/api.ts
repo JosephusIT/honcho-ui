@@ -1,4 +1,4 @@
-import type { Peer, Representation, Conclusion, Activity } from '@/types';
+import type { Peer, Conclusion } from '@/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
 

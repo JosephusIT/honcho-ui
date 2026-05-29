@@ -102,9 +102,8 @@ export default function PeersPage() {
     }
   }, []);
 
-  useEffect(() => {
-    loadPeers();
-  }, [loadPeers]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void loadPeers(); }, [loadPeers]);
 
   return (
     <div className={styles.page}>

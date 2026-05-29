@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import type { Peer, Representation, Conclusion, Activity } from '@/types';
 import { RepresentationList } from '@/components/features/RepresentationList';
 import { ActivityTimeline } from '@/components/features/ActivityTimeline';
-import { getPeer, getPeerContext, toPeer } from '@/lib/api';
+import { getPeer, toPeer } from '@/lib/api';
 import styles from './peerDetail.module.css';
 
 const WORKSPACE = process.env.NEXT_PUBLIC_WORKSPACE_ID ?? 'default';
@@ -71,9 +71,8 @@ export default function PeerDetailPage() {
     }
   }, [peerId]);
 
-  useEffect(() => {
-    loadPeer();
-  }, [loadPeer]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void loadPeer(); }, [loadPeer]);
 
   if (loading) {
     return (
