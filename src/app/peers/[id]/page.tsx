@@ -63,7 +63,7 @@ export default function PeerDetailPage() {
     setLoading(true);
     try {
       const raw = await getPeer(WORKSPACE, peerId);
-      setPeer(toPeer(raw));
+      if (raw !== null) setPeer(toPeer(raw));
     } catch {
       // Unknown peer — stay null and show not-found
     } finally {
