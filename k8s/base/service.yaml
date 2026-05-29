@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: honcho-ui
+  namespace: honcho-ui
+  labels:
+    app: honcho-ui
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
+      name: http
+  selector:
+    app: honcho-ui

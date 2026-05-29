@@ -1,12 +1,7 @@
-import type { Peer, Representation, Conclusion, Activity } from '@/types';
+import type { Peer, Conclusion } from '@/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
 
-/**
- * Build full URL from path.
- * If NEXT_PUBLIC_API_BASE is set (e.g. https://honcho.bouba.ar) use it directly.
- * Otherwise assume same-origin (Next.js proxy) or internal k8s svc.
- */
 function url(path: string): string {
   return API_BASE.endsWith('/') ? API_BASE + path.slice(1) : API_BASE + path;
 }
@@ -25,15 +20,34 @@ async function handle<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 // ---------------------------------------------------------------------------
-// Peers
+// Shared pagination response shape
+// ---------------------------------------------------------------------------
+export interface PagedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
+// ---------------------------------------------------------------------------
+// Peers — use POST /v3/workspaces/{id}/peers/list for paginated results
 // ---------------------------------------------------------------------------
 
 export async function getPeers(workspace: string): Promise<PeerResponse[]> {
-  return handle<PeerResponse[]>(`/v3/workspaces/${workspace}/peers`);
+  const data = await handle<PagedResponse<PeerResponse>>(
+    `/v3/workspaces/${workspace}/peers/list`,
+    { method: 'POST', body: JSON.stringify({}) }
+  );
+  return data.items;
 }
 
-export async function getPeer(workspace: string, peerId: string): Promise<PeerResponse> {
-  return handle<PeerResponse>(`/v3/workspaces/${workspace}/peers/${peerId}`);
+export async function getPeer(workspace: string, peerId: string): Promise<PeerResponse | null> {
+  try {
+    return await handle<PeerResponse>(`/v3/workspaces/${workspace}/peers/${peerId}`);
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -41,7 +55,11 @@ export async function getPeer(workspace: string, peerId: string): Promise<PeerRe
 // ---------------------------------------------------------------------------
 
 export async function getSessions(workspace: string): Promise<SessionResponse[]> {
-  return handle<SessionResponse[]>(`/v3/workspaces/${workspace}/sessions`);
+  const data = await handle<PagedResponse<SessionResponse>>(
+    `/v3/workspaces/${workspace}/sessions/list`,
+    { method: 'POST', body: JSON.stringify({}) }
+  );
+  return data.items;
 }
 
 export async function getSession(workspace: string, sessionId: string): Promise<SessionResponse> {
@@ -69,16 +87,17 @@ export async function getPeerCard(workspace: string, peerId: string): Promise<{ 
 // ---------------------------------------------------------------------------
 
 export async function getConclusions(workspace: string): Promise<Conclusion[]> {
-  // /v3/conclusions is a workspace-level summary; fall back to peer card for now
-  const data = await handle<{ conclusions?: Conclusion[] }>(`/v3/workspaces/${workspace}/conclusions`);
-  return data.conclusions ?? [];
+  const data = await handle<PagedResponse<ConclusionResponse>>(
+    `/v3/workspaces/${workspace}/conclusions/list`,
+    { method: 'POST', body: JSON.stringify({}) }
+  );
+  return data.items.map(toConclusion);
 }
 
 // ---------------------------------------------------------------------------
 // Mappers — convert raw API shapes to UI types
 // ---------------------------------------------------------------------------
 
-/** Map PeerResponse -> Peer (flat UI shape) */
 export function toPeer(raw: PeerResponse): Peer {
   const md = raw.metadata ?? {};
   return {
@@ -95,7 +114,21 @@ export function toPeer(raw: PeerResponse): Peer {
   };
 }
 
-// Types used internally by the API client
+export function toConclusion(raw: ConclusionResponse): Conclusion {
+  const md = raw.metadata ?? {};
+  return {
+    id: raw.id,
+    peerId: md.peer_id as string ?? raw.peer_id ?? '',
+    content: (md.content as string) ?? '',
+    createdAt: raw.created_at,
+    source: md.source as string | undefined,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Response types
+// ---------------------------------------------------------------------------
+
 export interface PeerResponse {
   id: string;
   workspace_id: string;
@@ -128,4 +161,11 @@ export interface PeerContextResponse {
   target_id: string;
   representation?: string;
   peer_card?: string[];
+}
+
+export interface ConclusionResponse {
+  id: string;
+  peer_id: string;
+  created_at: string;
+  metadata: Record<string, unknown>;
 }

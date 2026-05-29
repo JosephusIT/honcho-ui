@@ -1,11 +1,12 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { Peer, Representation, Conclusion, Activity } from '@/types';
 import { RepresentationList } from '@/components/features/RepresentationList';
 import { ActivityTimeline } from '@/components/features/ActivityTimeline';
-import { getPeer, getPeerContext, toPeer } from '@/lib/api';
+import { getPeer, toPeer } from '@/lib/api';
 import styles from './peerDetail.module.css';
 
 const WORKSPACE = process.env.NEXT_PUBLIC_WORKSPACE_ID ?? 'default';
@@ -20,7 +21,6 @@ function getInitials(name: string): string {
   return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
 }
 
-// Demo fallback data
 const MOCK_REPRESENTATIONS: Representation[] = [
   {
     id: 'r1', peerId: 'p_alice', peerName: 'Alice Chen',
@@ -63,7 +63,9 @@ export default function PeerDetailPage() {
     setLoading(true);
     try {
       const raw = await getPeer(WORKSPACE, peerId);
-      setPeer(toPeer(raw));
+      if (raw !== null) {
+        setPeer(toPeer(raw));
+      }
     } catch {
       // Unknown peer — stay null and show not-found
     } finally {
@@ -72,7 +74,8 @@ export default function PeerDetailPage() {
   }, [peerId]);
 
   useEffect(() => {
-    loadPeer();
+    const handle = requestAnimationFrame(() => loadPeer());
+    return () => cancelAnimationFrame(handle);
   }, [loadPeer]);
 
   if (loading) {
@@ -122,11 +125,10 @@ export default function PeerDetailPage() {
         Peers
       </button>
 
-      {/* Profile header */}
       <div className={styles.profileHeader}>
         <div className={styles.avatarLarge}>
           {peer.avatar
-            ? <img src={peer.avatar} alt={peer.name} className={styles.avatarImg} />
+            ? <Image src={peer.avatar} alt={peer.name} width={64} height={64} className={styles.avatarImg} />
             : <span className={styles.avatarInitials}>{getInitials(peer.name)}</span>
           }
           <span className={`${styles.statusDot} ${styles[peer.status]}`} />
@@ -149,7 +151,6 @@ export default function PeerDetailPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className={styles.tabs}>
         <button className={`${styles.tab} ${tab === 'representations' ? styles.tabActive : ''}`} onClick={() => setTab('representations')}>
           Representations
@@ -165,7 +166,6 @@ export default function PeerDetailPage() {
         </button>
       </div>
 
-      {/* Tab content */}
       <div className={styles.tabContent}>
         {tab === 'representations' && <RepresentationList representations={representations} />}
         {tab === 'conclusions' && (
@@ -185,7 +185,6 @@ export default function PeerDetailPage() {
         {tab === 'activity' && <ActivityTimeline activities={activity} />}
       </div>
 
-      {/* Settings section */}
       <div className={styles.settingsSection}>
         <h2 className={styles.sectionTitle}>Settings</h2>
         <div className={styles.settingsCard}>
