@@ -1,11 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Peer, StatusFilter } from '@/types';
 import { PeerGrid } from '@/components/features/PeerGrid';
+import { getPeers, toPeer } from '@/lib/api';
 import styles from './peers.module.css';
 
-// Mock data — replace with API calls when backend is ready
+const WORKSPACE = process.env.NEXT_PUBLIC_WORKSPACE_ID ?? 'default';
+
+const FILTERS: { label: string; value: StatusFilter }[] = [
+  { label: 'All', value: 'all' },
+  { label: 'Online', value: 'online' },
+  { label: 'Away', value: 'away' },
+  { label: 'Offline', value: 'offline' },
+];
+
+// Graceful fallback — keep mock data for demo / offline use
 const MOCK_PEERS: Peer[] = [
   {
     id: 'p_alice',
@@ -69,24 +79,69 @@ const MOCK_PEERS: Peer[] = [
   },
 ];
 
-const FILTERS: { label: string; value: StatusFilter }[] = [
-  { label: 'All', value: 'all' },
-  { label: 'Online', value: 'online' },
-  { label: 'Away', value: 'away' },
-  { label: 'Offline', value: 'offline' },
-];
-
 export default function PeersPage() {
   const [filter, setFilter] = useState<StatusFilter>('all');
+  const [peers, setPeers] = useState<Peer[]>(MOCK_PEERS);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadPeers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const raw = await getPeers(WORKSPACE);
+      if (raw && raw.length > 0) {
+        setPeers(raw.map(toPeer));
+      }
+      // If API returns empty, keep mock data so UI still shows something
+    } catch (err) {
+      // API unavailable — keep mock data (dev / offline mode)
+      console.warn('[PeersPage] API unavailable, using mock data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPeers();
+  }, [loadPeers]);
 
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
         <div>
           <h1 className={styles.title}>Peers</h1>
-          <p className={styles.subtitle}>{MOCK_PEERS.length} peers in this workspace</p>
+          <p className={styles.subtitle}>
+            {loading ? 'Loading…' : `${peers.length} peer${peers.length !== 1 ? 's' : ''} in this workspace`}
+          </p>
         </div>
+        <button
+          className={styles.refreshBtn}
+          onClick={loadPeers}
+          disabled={loading}
+          title="Refresh peers"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className={loading ? styles.spinning : ''}
+          >
+            <path d="M23 4v6h-6M1 20v-6h6" />
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+          </svg>
+        </button>
       </div>
+
+      {error && (
+        <div className={styles.errorBanner}>
+          <span>{error}</span>
+          <button onClick={loadPeers}>Retry</button>
+        </div>
+      )}
 
       <div className={styles.filters}>
         {FILTERS.map((f) => (
@@ -100,7 +155,7 @@ export default function PeersPage() {
         ))}
       </div>
 
-      <PeerGrid peers={MOCK_PEERS} filter={filter} />
+      <PeerGrid peers={peers} filter={filter} />
     </div>
   );
 }

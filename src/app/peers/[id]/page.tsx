@@ -1,27 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { Peer, Representation, Conclusion, Activity } from '@/types';
 import { RepresentationList } from '@/components/features/RepresentationList';
 import { ActivityTimeline } from '@/components/features/ActivityTimeline';
+import { getPeer, getPeerContext, toPeer } from '@/lib/api';
 import styles from './peerDetail.module.css';
 
-// Mock data — replace with API calls when backend is ready
-const MOCK_PEERS: Record<string, Peer> = {
-  p_alice: {
-    id: 'p_alice', name: 'Alice Chen', status: 'online',
-    joinedAt: '2025-03-15T10:00:00Z', modelsOwned: 4, representationCount: 12,
-    bio: 'AI researcher focused on memory systems.', lastSeen: new Date().toISOString(),
-  },
-  p_bob: {
-    id: 'p_bob', name: 'Bob Martinez', status: 'away',
-    joinedAt: '2025-01-20T14:30:00Z', modelsOwned: 2, representationCount: 8,
-    bio: 'Product lead exploring autonomous agents.',
-    lastSeen: new Date(Date.now() - 25 * 60000).toISOString(),
-  },
-};
+const WORKSPACE = process.env.NEXT_PUBLIC_WORKSPACE_ID ?? 'default';
 
+type Tab = 'representations' | 'conclusions' | 'activity';
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function getInitials(name: string): string {
+  return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+}
+
+// Demo fallback data
 const MOCK_REPRESENTATIONS: Representation[] = [
   {
     id: 'r1', peerId: 'p_alice', peerName: 'Alice Chen',
@@ -51,31 +50,61 @@ const MOCK_ACTIVITY: Activity[] = [
   { id: 'a5', peerId: 'p_alice', type: 'session', description: 'Explored persistent memory architectures', timestamp: '2025-04-20T14:00:00Z' },
 ];
 
-type Tab = 'representations' | 'conclusions' | 'activity';
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-}
-
-function getInitials(name: string): string {
-  return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
-}
-
 export default function PeerDetailPage() {
   const params = useParams();
   const router = useRouter();
   const peerId = params.id as string;
 
+  const [peer, setPeer] = useState<Peer | null>(null);
+  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('representations');
 
-  // Find mock peer or 404
-  const peer = MOCK_PEERS[peerId as keyof typeof MOCK_PEERS] ?? null;
+  const loadPeer = useCallback(async () => {
+    setLoading(true);
+    try {
+      const raw = await getPeer(WORKSPACE, peerId);
+      setPeer(toPeer(raw));
+    } catch {
+      // Unknown peer — stay null and show not-found
+    } finally {
+      setLoading(false);
+    }
+  }, [peerId]);
+
+  useEffect(() => {
+    loadPeer();
+  }, [loadPeer]);
+
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.loadingState}>
+          <div className={styles.skeleton} style={{ width: '60px', height: '60px', borderRadius: '50%' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+            <div className={styles.skeleton} style={{ width: '200px', height: '24px' }} />
+            <div className={styles.skeleton} style={{ width: '120px', height: '16px' }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!peer) {
     return (
-      <div className={styles.notFound}>
-        <h2>Peer not found</h2>
-        <button className="btn btn-secondary" onClick={() => router.push('/peers')}>Back to Peers</button>
+      <div className={styles.page}>
+        <button className={styles.backBtn} onClick={() => router.push('/peers')}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
+          Peers
+        </button>
+        <div className={styles.notFound}>
+          <h2>Peer not found</h2>
+          <p>This peer does not exist in this workspace.</p>
+          <button className={styles.btnPrimary} onClick={() => router.push('/peers')}>
+            Back to Peers
+          </button>
+        </div>
       </div>
     );
   }
@@ -86,7 +115,6 @@ export default function PeerDetailPage() {
 
   return (
     <div className={styles.page}>
-      {/* Back nav */}
       <button className={styles.backBtn} onClick={() => router.push('/peers')}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M19 12H5M12 5l-7 7 7 7"/>
@@ -104,10 +132,12 @@ export default function PeerDetailPage() {
           <span className={`${styles.statusDot} ${styles[peer.status]}`} />
         </div>
         <div className={styles.profileInfo}>
-          <h1 className={styles.peerName}>{peer.name}</h1>
-          <span className={`badge badge-${peer.status === 'online' ? 'success' : peer.status === 'away' ? 'warning' : 'default'}`}>
-            {peer.status}
-          </span>
+          <div className={styles.nameRow}>
+            <h1 className={styles.peerName}>{peer.name}</h1>
+            <span className={`badge badge-${peer.status === 'online' ? 'success' : peer.status === 'away' ? 'warning' : 'default'}`}>
+              {peer.status}
+            </span>
+          </div>
           {peer.bio && <p className={styles.bio}>{peer.bio}</p>}
           <div className={styles.profileMeta}>
             <span>Joined {formatDate(peer.joinedAt)}</span>
@@ -123,20 +153,21 @@ export default function PeerDetailPage() {
       <div className={styles.tabs}>
         <button className={`${styles.tab} ${tab === 'representations' ? styles.tabActive : ''}`} onClick={() => setTab('representations')}>
           Representations
+          <span className={styles.tabCount}>{representations.length}</span>
         </button>
         <button className={`${styles.tab} ${tab === 'conclusions' ? styles.tabActive : ''}`} onClick={() => setTab('conclusions')}>
           Conclusions
+          <span className={styles.tabCount}>{conclusions.length}</span>
         </button>
         <button className={`${styles.tab} ${tab === 'activity' ? styles.tabActive : ''}`} onClick={() => setTab('activity')}>
           Activity
+          <span className={styles.tabCount}>{activity.length}</span>
         </button>
       </div>
 
       {/* Tab content */}
       <div className={styles.tabContent}>
-        {tab === 'representations' && (
-          <RepresentationList representations={representations} />
-        )}
+        {tab === 'representations' && <RepresentationList representations={representations} />}
         {tab === 'conclusions' && (
           <div className={styles.conclusionsList}>
             {conclusions.length === 0 ? (
@@ -151,9 +182,7 @@ export default function PeerDetailPage() {
             )}
           </div>
         )}
-        {tab === 'activity' && (
-          <ActivityTimeline activities={activity} />
-        )}
+        {tab === 'activity' && <ActivityTimeline activities={activity} />}
       </div>
 
       {/* Settings section */}
@@ -165,14 +194,14 @@ export default function PeerDetailPage() {
               <span className={styles.settingLabel}>Notifications</span>
               <span className={styles.settingDesc}>Receive updates when this peer is active</span>
             </div>
-            <button className="btn btn-secondary btn-sm">Configure</button>
+            <button className={styles.btnSecondary}>Configure</button>
           </div>
           <div className={styles.settingRow}>
             <div>
               <span className={styles.settingLabel}>Export Data</span>
               <span className={styles.settingDesc}>Download all peer data as JSON</span>
             </div>
-            <button className="btn btn-secondary btn-sm">Export</button>
+            <button className={styles.btnSecondary}>Export</button>
           </div>
         </div>
       </div>

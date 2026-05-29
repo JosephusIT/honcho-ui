@@ -1,3 +1,5 @@
+// Honcho API v3 types — mirrors the Python SDK schemas
+
 export type PeerStatus = 'online' | 'away' | 'offline';
 
 export interface Peer {
@@ -5,8 +7,8 @@ export interface Peer {
   name: string;
   avatar?: string;
   status: PeerStatus;
-  lastSeen?: string; // ISO date string
-  joinedAt: string; // ISO date string
+  lastSeen?: string;
+  joinedAt: string;
   modelsOwned: number;
   representationCount: number;
   bio?: string;
@@ -42,3 +44,28 @@ export interface Activity {
 }
 
 export type StatusFilter = 'all' | PeerStatus;
+
+// API response types (Honcho v3)
+export interface PeerResponse {
+  id: string;
+  workspace_id: string;
+  created_at: string;
+  metadata: Record<string, unknown>;
+  configuration?: {
+    reasoning?: { enabled?: boolean; custom_instructions?: string };
+    peer_card?: { use?: boolean; create?: boolean };
+    summary?: { enabled?: boolean; messages_per_short_summary?: number; messages_per_long_summary?: number };
+    dream?: { enabled?: boolean };
+  };
+}
+
+export interface WorkspaceResponse {
+  id: string;
+  metadata?: Record<string, unknown>;
+  configuration?: {
+    reasoning?: { enabled?: boolean; custom_instructions?: string };
+    peer_card?: { use?: boolean; create?: boolean };
+    summary?: { enabled?: boolean; messages_per_short_summary?: number; messages_per_long_summary?: number };
+    dream?: { enabled?: boolean };
+  };
+}
