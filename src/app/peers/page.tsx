@@ -3,11 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Peer, StatusFilter } from '@/types';
 import { PeerGrid } from '@/components/features/PeerGrid';
+import { useAppConfig } from '@/components/providers/AppConfigProvider';
 import { getPeers, toPeer } from '@/lib/api';
-import { appConfig, getMissingConfig } from '@/lib/config';
+import { getMissingConfig } from '@/lib/config';
 import styles from './peers.module.css';
-
-const WORKSPACE = appConfig.workspaceId;
 
 const FILTERS: { label: string; value: StatusFilter }[] = [
   { label: 'All', value: 'all' },
@@ -17,22 +16,23 @@ const FILTERS: { label: string; value: StatusFilter }[] = [
 ];
 
 export default function PeersPage() {
+  const appConfig = useAppConfig();
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [peers, setPeers] = useState<Peer[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadPeers = useCallback(async () => {
-    if (!WORKSPACE) {
+    if (!appConfig.workspaceId || !appConfig.apiBase) {
       setPeers([]);
-      setError(`Missing configuration: ${getMissingConfig().join(', ')}`);
+      setError(`Missing configuration: ${getMissingConfig(appConfig).join(', ')}`);
       return;
     }
 
     setLoading(true);
     setError(null);
     try {
-      const raw = await getPeers(WORKSPACE);
+      const raw = await getPeers(appConfig.apiBase, appConfig.workspaceId);
       setPeers(raw.map(toPeer));
     } catch (err) {
       console.warn('[PeersPage] Failed to load peers:', err);
@@ -41,7 +41,7 @@ export default function PeersPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [appConfig]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void loadPeers(); }, [loadPeers]);
@@ -58,7 +58,7 @@ export default function PeersPage() {
         <button
           className={styles.refreshBtn}
           onClick={loadPeers}
-          disabled={loading || !WORKSPACE}
+          disabled={loading || !appConfig.workspaceId || !appConfig.apiBase}
           title="Refresh peers"
         >
           <svg
@@ -79,7 +79,7 @@ export default function PeersPage() {
       {error && (
         <div className={styles.errorBanner}>
           <span>{error}</span>
-          {WORKSPACE && <button onClick={loadPeers}>Retry</button>}
+          {appConfig.workspaceId && appConfig.apiBase && <button onClick={loadPeers}>Retry</button>}
         </div>
       )}
 

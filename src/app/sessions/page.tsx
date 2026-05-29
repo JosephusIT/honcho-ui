@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAppConfig } from '@/components/providers/AppConfigProvider';
 import { getSessions } from '@/lib/api';
-import { appConfig, getMissingConfig } from '@/lib/config';
+import { getMissingConfig } from '@/lib/config';
 import styles from './sessions.module.css';
-
-const WORKSPACE = appConfig.workspaceId;
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -38,22 +37,23 @@ interface SessionItem {
 }
 
 export default function SessionsPage() {
+  const appConfig = useAppConfig();
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
-      if (!WORKSPACE) {
+      if (!appConfig.workspaceId || !appConfig.apiBase) {
         setSessions([]);
-        setError(`Missing configuration: ${getMissingConfig().join(', ')}`);
+        setError(`Missing configuration: ${getMissingConfig(appConfig).join(', ')}`);
         return;
       }
 
       setLoading(true);
       setError(null);
       try {
-        const raw = await getSessions(WORKSPACE);
+        const raw = await getSessions(appConfig.apiBase, appConfig.workspaceId);
         setSessions(raw.map((s) => ({
           id: s.id,
           title: (s.metadata?.title as string) ?? `Session ${s.id.slice(0, 8)}`,
@@ -70,7 +70,7 @@ export default function SessionsPage() {
       }
     }
     void load();
-  }, []);
+  }, [appConfig]);
 
   return (
     <div className={styles.page}>

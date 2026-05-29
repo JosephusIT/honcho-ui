@@ -6,11 +6,10 @@ import { useParams, useRouter } from 'next/navigation';
 import type { Peer, Representation, Conclusion, Activity } from '@/types';
 import { RepresentationList } from '@/components/features/RepresentationList';
 import { ActivityTimeline } from '@/components/features/ActivityTimeline';
+import { useAppConfig } from '@/components/providers/AppConfigProvider';
 import { getConclusions, getPeer, getPeerCard, getPeerContext, toPeer } from '@/lib/api';
-import { appConfig, getMissingConfig } from '@/lib/config';
+import { getMissingConfig } from '@/lib/config';
 import styles from './peerDetail.module.css';
-
-const WORKSPACE = appConfig.workspaceId;
 
 type Tab = 'representations' | 'conclusions' | 'activity';
 
@@ -23,6 +22,7 @@ function getInitials(name: string): string {
 }
 
 export default function PeerDetailPage() {
+  const appConfig = useAppConfig();
   const params = useParams();
   const router = useRouter();
   const peerId = params.id as string;
@@ -36,12 +36,12 @@ export default function PeerDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const loadPeer = useCallback(async () => {
-    if (!WORKSPACE) {
+    if (!appConfig.workspaceId || !appConfig.apiBase) {
       setPeer(null);
       setRepresentations([]);
       setConclusions([]);
       setActivity([]);
-      setError(`Missing configuration: ${getMissingConfig().join(', ')}`);
+      setError(`Missing configuration: ${getMissingConfig(appConfig).join(', ')}`);
       setLoading(false);
       return;
     }
@@ -50,10 +50,10 @@ export default function PeerDetailPage() {
     setError(null);
     try {
       const [rawPeer, context, card, allConclusions] = await Promise.all([
-        getPeer(WORKSPACE, peerId),
-        getPeerContext(WORKSPACE, peerId).catch(() => null),
-        getPeerCard(WORKSPACE, peerId).catch(() => null),
-        getConclusions(WORKSPACE).catch(() => []),
+        getPeer(appConfig.apiBase, appConfig.workspaceId, peerId),
+        getPeerContext(appConfig.apiBase, appConfig.workspaceId, peerId).catch(() => null),
+        getPeerCard(appConfig.apiBase, appConfig.workspaceId, peerId).catch(() => null),
+        getConclusions(appConfig.apiBase, appConfig.workspaceId).catch(() => []),
       ]);
 
       if (rawPeer === null) {
@@ -131,7 +131,7 @@ export default function PeerDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [peerId]);
+  }, [appConfig, peerId]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void loadPeer(); }, [loadPeer]);

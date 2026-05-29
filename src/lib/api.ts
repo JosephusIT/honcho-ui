@@ -1,18 +1,15 @@
 import type { Peer, Conclusion } from '@/types';
-import { appConfig } from './config';
 
-const API_BASE = appConfig.apiBase;
-
-function url(path: string): string {
-  return API_BASE.endsWith('/') ? API_BASE + path.slice(1) : API_BASE + path;
+function url(apiBase: string, path: string): string {
+  return apiBase.endsWith('/') ? apiBase + path.slice(1) : apiBase + path;
 }
 
-async function handle<T>(path: string, init?: RequestInit): Promise<T> {
-  if (!API_BASE) {
+async function handle<T>(apiBase: string, path: string, init?: RequestInit): Promise<T> {
+  if (!apiBase) {
     throw new Error('Missing NEXT_PUBLIC_API_BASE configuration.');
   }
 
-  const res = await fetch(url(path), {
+  const res = await fetch(url(apiBase, path), {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     ...init,
@@ -24,9 +21,6 @@ async function handle<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
-// ---------------------------------------------------------------------------
-// Shared pagination response shape
-// ---------------------------------------------------------------------------
 export interface PagedResponse<T> {
   items: T[];
   total: number;
@@ -35,73 +29,56 @@ export interface PagedResponse<T> {
   pages: number;
 }
 
-// ---------------------------------------------------------------------------
-// Peers — use POST /v3/workspaces/{id}/peers/list for paginated results
-// ---------------------------------------------------------------------------
-
-export async function getPeers(workspace: string): Promise<PeerResponse[]> {
+export async function getPeers(apiBase: string, workspace: string): Promise<PeerResponse[]> {
   const data = await handle<PagedResponse<PeerResponse>>(
+    apiBase,
     `/v3/workspaces/${workspace}/peers/list`,
     { method: 'POST', body: JSON.stringify({}) }
   );
   return data.items;
 }
 
-export async function getPeer(workspace: string, peerId: string): Promise<PeerResponse | null> {
+export async function getPeer(apiBase: string, workspace: string, peerId: string): Promise<PeerResponse | null> {
   try {
-    return await handle<PeerResponse>(`/v3/workspaces/${workspace}/peers/${peerId}`);
+    return await handle<PeerResponse>(apiBase, `/v3/workspaces/${workspace}/peers/${peerId}`);
   } catch {
     return null;
   }
 }
 
-// ---------------------------------------------------------------------------
-// Sessions
-// ---------------------------------------------------------------------------
-
-export async function getSessions(workspace: string): Promise<SessionResponse[]> {
+export async function getSessions(apiBase: string, workspace: string): Promise<SessionResponse[]> {
   const data = await handle<PagedResponse<SessionResponse>>(
+    apiBase,
     `/v3/workspaces/${workspace}/sessions/list`,
     { method: 'POST', body: JSON.stringify({}) }
   );
   return data.items;
 }
 
-export async function getSession(workspace: string, sessionId: string): Promise<SessionResponse> {
-  return handle<SessionResponse>(`/v3/workspaces/${workspace}/sessions/${sessionId}`);
+export async function getSession(apiBase: string, workspace: string, sessionId: string): Promise<SessionResponse> {
+  return handle<SessionResponse>(apiBase, `/v3/workspaces/${workspace}/sessions/${sessionId}`);
 }
 
-export async function getSessionMessages(workspace: string, sessionId: string): Promise<MessageResponse[]> {
-  return handle<MessageResponse[]>(`/v3/workspaces/${workspace}/sessions/${sessionId}/messages`);
+export async function getSessionMessages(apiBase: string, workspace: string, sessionId: string): Promise<MessageResponse[]> {
+  return handle<MessageResponse[]>(apiBase, `/v3/workspaces/${workspace}/sessions/${sessionId}/messages`);
 }
 
-// ---------------------------------------------------------------------------
-// Context / Representations
-// ---------------------------------------------------------------------------
-
-export async function getPeerContext(workspace: string, peerId: string): Promise<PeerContextResponse> {
-  return handle<PeerContextResponse>(`/v3/workspaces/${workspace}/peers/${peerId}/context`);
+export async function getPeerContext(apiBase: string, workspace: string, peerId: string): Promise<PeerContextResponse> {
+  return handle<PeerContextResponse>(apiBase, `/v3/workspaces/${workspace}/peers/${peerId}/context`);
 }
 
-export async function getPeerCard(workspace: string, peerId: string): Promise<{ peer_card: string[] }> {
-  return handle<{ peer_card: string[] }>(`/v3/workspaces/${workspace}/peers/${peerId}/card`);
+export async function getPeerCard(apiBase: string, workspace: string, peerId: string): Promise<{ peer_card: string[] }> {
+  return handle<{ peer_card: string[] }>(apiBase, `/v3/workspaces/${workspace}/peers/${peerId}/card`);
 }
 
-// ---------------------------------------------------------------------------
-// Conclusions
-// ---------------------------------------------------------------------------
-
-export async function getConclusions(workspace: string): Promise<Conclusion[]> {
+export async function getConclusions(apiBase: string, workspace: string): Promise<Conclusion[]> {
   const data = await handle<PagedResponse<ConclusionResponse>>(
+    apiBase,
     `/v3/workspaces/${workspace}/conclusions/list`,
     { method: 'POST', body: JSON.stringify({}) }
   );
   return data.items.map(toConclusion);
 }
-
-// ---------------------------------------------------------------------------
-// Mappers — convert raw API shapes to UI types
-// ---------------------------------------------------------------------------
 
 export function toPeer(raw: PeerResponse): Peer {
   const md = raw.metadata ?? {};
@@ -123,16 +100,12 @@ export function toConclusion(raw: ConclusionResponse): Conclusion {
   const md = raw.metadata ?? {};
   return {
     id: raw.id,
-    peerId: md.peer_id as string ?? raw.peer_id ?? '',
+    peerId: (md.peer_id as string) ?? raw.peer_id ?? '',
     content: (md.content as string) ?? '',
     createdAt: raw.created_at,
     source: md.source as string | undefined,
   };
 }
-
-// ---------------------------------------------------------------------------
-// Response types
-// ---------------------------------------------------------------------------
 
 export interface PeerResponse {
   id: string;

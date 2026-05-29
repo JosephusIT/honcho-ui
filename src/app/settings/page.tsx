@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { appConfig } from '@/lib/config';
+import { useAppConfig } from '@/components/providers/AppConfigProvider';
 import styles from './settings.module.css';
 
 export default function SettingsPage() {
+  const appConfig = useAppConfig();
   const [saved, setSaved] = useState(false);
 
   function handleSave(e: React.FormEvent) {
@@ -33,7 +34,7 @@ export default function SettingsPage() {
               placeholder="your-workspace-id"
               readOnly
             />
-            <span className={styles.hint}>Read from NEXT_PUBLIC_WORKSPACE_ID at build/deploy time</span>
+            <span className={styles.hint}>Read from NEXT_PUBLIC_WORKSPACE_ID at runtime from the deployment environment</span>
           </div>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="api-base">API Base URL</label>
@@ -45,7 +46,7 @@ export default function SettingsPage() {
               placeholder="https://honcho.example.com"
               readOnly
             />
-            <span className={styles.hint}>Read from NEXT_PUBLIC_API_BASE at build/deploy time</span>
+            <span className={styles.hint}>Read from NEXT_PUBLIC_API_BASE at runtime from the deployment environment</span>
           </div>
         </section>
 

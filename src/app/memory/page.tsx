@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAppConfig } from '@/components/providers/AppConfigProvider';
 import { getPeers, getConclusions } from '@/lib/api';
-import { appConfig, getMissingConfig } from '@/lib/config';
+import { getMissingConfig } from '@/lib/config';
 import styles from './memory.module.css';
-
-const WORKSPACE = appConfig.workspaceId;
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -24,15 +23,16 @@ interface MemoryItem {
 }
 
 export default function MemoryPage() {
+  const appConfig = useAppConfig();
   const [items, setItems] = useState<MemoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
-      if (!WORKSPACE) {
+      if (!appConfig.workspaceId || !appConfig.apiBase) {
         setItems([]);
-        setError(`Missing configuration: ${getMissingConfig().join(', ')}`);
+        setError(`Missing configuration: ${getMissingConfig(appConfig).join(', ')}`);
         setLoading(false);
         return;
       }
@@ -41,8 +41,8 @@ export default function MemoryPage() {
       setError(null);
       try {
         const [peers, conclusions] = await Promise.all([
-          getPeers(WORKSPACE),
-          getConclusions(WORKSPACE),
+          getPeers(appConfig.apiBase, appConfig.workspaceId),
+          getConclusions(appConfig.apiBase, appConfig.workspaceId),
         ]);
         const peerMap = new Map(peers.map((p) => [p.id, (p.metadata?.name as string) ?? p.id]));
         const memItems: MemoryItem[] = conclusions.map((c) => ({
@@ -62,7 +62,7 @@ export default function MemoryPage() {
       }
     }
     void load();
-  }, []);
+  }, [appConfig]);
 
   return (
     <div className={styles.page}>
