@@ -1,0 +1,4 @@
+# Override image tag for production overlay
+images:
+  - name: ghcr.io/josephusit/honcho-ui
+    newTag: latest
