@@ -9,6 +9,11 @@ resources:
   - service.yaml
   - ingress.yaml
 
+images:
+  - name: ghcr.io/josephusit/honcho-ui
+    newTag: latest
+    newName: ghcr.io/josephusit/honcho-ui
+
 commonLabels:
   app.kubernetes.io/name: honcho-ui
   app.kubernetes.io/part-of: honcho

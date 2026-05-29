@@ -20,7 +20,7 @@ spec:
       containers:
         - name: honcho-ui
           image: ghcr.io/josephusit/honcho-ui:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
               name: http
