@@ -45,7 +45,7 @@ interface SessionItem {
 }
 
 export default function SessionsPage() {
-  const [sessions, setSessions] = useState<SessionItem[]>(MOCK_SESSIONS);
+  const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -62,8 +62,10 @@ export default function SessionsPage() {
             updatedAt: s.created_at,
           })));
         }
-      } catch {
-        // keep mock
+        // API returned empty — show empty state, not fake data
+      } catch (err) {
+        console.warn('[SessionsPage] API unavailable, using mock data:', err);
+        setSessions(MOCK_SESSIONS);
       } finally {
         setLoading(false);
       }

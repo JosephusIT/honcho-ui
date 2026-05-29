@@ -16,11 +16,12 @@ const FILTERS: { label: string; value: StatusFilter }[] = [
 ];
 
 // Graceful fallback — keep mock data for demo / offline use
+// BUT: only use mock if API call actually failed. Empty results from API are still real data.
 const MOCK_PEERS: Peer[] = [
   {
     id: 'p_alice',
     name: 'Alice Chen',
-    status: 'online',
+    status: 'online' as const,
     joinedAt: '2025-03-15T10:00:00Z',
     modelsOwned: 4,
     representationCount: 12,
@@ -93,10 +94,11 @@ export default function PeersPage() {
       if (raw && raw.length > 0) {
         setPeers(raw.map(toPeer));
       }
-      // If API returns empty, keep mock data so UI still shows something
+      // API returned empty — show empty state, not fake data
     } catch (err) {
-      // API unavailable — keep mock data (dev / offline mode)
+      // API unavailable — fall back to mock data (dev / offline mode only)
       console.warn('[PeersPage] API unavailable, using mock data:', err);
+      setPeers(MOCK_PEERS);
     } finally {
       setLoading(false);
     }
