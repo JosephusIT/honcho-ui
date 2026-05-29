@@ -38,9 +38,9 @@ export default function MemoryPage() {
         const memItems: MemoryItem[] = conclusions.map((c) => ({
           id: c.id,
           type: 'conclusion' as const,
-          peer: c.peer_id ? (peerMap.get(c.peer_id) ?? c.peer_id) : 'Unknown',
-          content: (c.metadata?.content as string) ?? '',
-          createdAt: c.created_at,
+          peer: c.peerId ? (peerMap.get(c.peerId) ?? c.peerId) : 'Unknown',
+          content: c.content,
+          createdAt: c.createdAt,
         }));
         memItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setItems(memItems);
