@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: honcho-ui
+  labels:
+    app.kubernetes.io/name: honcho-ui
+    app.kubernetes.io/part-of: honcho

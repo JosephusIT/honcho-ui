@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: honcho-ui
+  namespace: honcho-ui
+  labels:
+    app: honcho-ui
+    app.kubernetes.io/name: honcho-ui
+    app.kubernetes.io/part-of: honcho
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: honcho-ui
+  template:
+    metadata:
+      labels:
+        app: honcho-ui
+    spec:
+      containers:
+        - name: honcho-ui
+          image: ghcr.io/josephusit/honcho-ui:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: NEXT_PUBLIC_API_BASE
+              value: https://honcho.bouba.ar
+            - name: NEXT_PUBLIC_WORKSPACE_ID
+              value: default
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3

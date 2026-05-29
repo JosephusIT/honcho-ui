@@ -1,4 +1,4 @@
-import type { Peer, Representation, Conclusion, Activity } from '@/types';
+import type { Peer, Conclusion } from '@/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
 
@@ -35,44 +35,39 @@ export interface PagedResponse<T> {
 // ---------------------------------------------------------------------------
 
 export async function getPeers(workspace: string): Promise<PeerResponse[]> {
-  const res = await handle<PagedResponse<PeerResponse>>(
+  const data = await handle<PagedResponse<PeerResponse>>(
     `/v3/workspaces/${workspace}/peers/list`,
-    { method: 'POST', body: JSON.stringify({ limit: 100 }) }
+    { method: 'POST', body: JSON.stringify({}) }
   );
-  return res.items ?? [];
+  return data.items;
 }
 
 export async function getPeer(workspace: string, peerId: string): Promise<PeerResponse | null> {
-  const res = await handle<PeerResponse>(
-    `/v3/workspaces/${workspace}/peers/${peerId}`
-  );
-  return res;
+  try {
+    return await handle<PeerResponse>(`/v3/workspaces/${workspace}/peers/${peerId}`);
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Sessions — use POST /v3/workspaces/{id}/sessions/list
-// GET /v3/workspaces/{id}/sessions/{session_id} for single session
-// GET /v3/workspaces/{id}/sessions/{session_id}/messages for messages
+// Sessions
 // ---------------------------------------------------------------------------
 
 export async function getSessions(workspace: string): Promise<SessionResponse[]> {
-  const res = await handle<PagedResponse<SessionResponse>>(
+  const data = await handle<PagedResponse<SessionResponse>>(
     `/v3/workspaces/${workspace}/sessions/list`,
-    { method: 'POST', body: JSON.stringify({ limit: 100 }) }
+    { method: 'POST', body: JSON.stringify({}) }
   );
-  return res.items ?? [];
+  return data.items;
 }
 
 export async function getSession(workspace: string, sessionId: string): Promise<SessionResponse> {
-  return handle<SessionResponse>(
-    `/v3/workspaces/${workspace}/sessions/${sessionId}`
-  );
+  return handle<SessionResponse>(`/v3/workspaces/${workspace}/sessions/${sessionId}`);
 }
 
 export async function getSessionMessages(workspace: string, sessionId: string): Promise<MessageResponse[]> {
-  return handle<MessageResponse[]>(
-    `/v3/workspaces/${workspace}/sessions/${sessionId}/messages`
-  );
+  return handle<MessageResponse[]>(`/v3/workspaces/${workspace}/sessions/${sessionId}/messages`);
 }
 
 // ---------------------------------------------------------------------------
@@ -88,22 +83,21 @@ export async function getPeerCard(workspace: string, peerId: string): Promise<{ 
 }
 
 // ---------------------------------------------------------------------------
-// Conclusions — use POST /v3/workspaces/{id}/conclusions/list
+// Conclusions
 // ---------------------------------------------------------------------------
 
-export async function getConclusions(workspace: string): Promise<ConclusionResponse[]> {
-  const res = await handle<PagedResponse<ConclusionResponse>>(
+export async function getConclusions(workspace: string): Promise<Conclusion[]> {
+  const data = await handle<PagedResponse<ConclusionResponse>>(
     `/v3/workspaces/${workspace}/conclusions/list`,
-    { method: 'POST', body: JSON.stringify({ limit: 100 }) }
+    { method: 'POST', body: JSON.stringify({}) }
   );
-  return res.items ?? [];
+  return data.items.map(toConclusion);
 }
 
 // ---------------------------------------------------------------------------
 // Mappers — convert raw API shapes to UI types
 // ---------------------------------------------------------------------------
 
-/** Map PeerResponse -> Peer (flat UI shape) */
 export function toPeer(raw: PeerResponse): Peer {
   const md = raw.metadata ?? {};
   return {
@@ -120,12 +114,11 @@ export function toPeer(raw: PeerResponse): Peer {
   };
 }
 
-/** Map ConclusionResponse -> Conclusion */
 export function toConclusion(raw: ConclusionResponse): Conclusion {
   const md = raw.metadata ?? {};
   return {
     id: raw.id,
-    peerId: raw.peer_id ?? '',
+    peerId: md.peer_id as string ?? raw.peer_id ?? '',
     content: (md.content as string) ?? '',
     createdAt: raw.created_at,
     source: md.source as string | undefined,
@@ -133,8 +126,9 @@ export function toConclusion(raw: ConclusionResponse): Conclusion {
 }
 
 // ---------------------------------------------------------------------------
-// Types used internally by the API client
+// Response types
 // ---------------------------------------------------------------------------
+
 export interface PeerResponse {
   id: string;
   workspace_id: string;
@@ -171,8 +165,7 @@ export interface PeerContextResponse {
 
 export interface ConclusionResponse {
   id: string;
-  peer_id?: string;
-  workspace_id: string;
+  peer_id: string;
   created_at: string;
   metadata: Record<string, unknown>;
 }
