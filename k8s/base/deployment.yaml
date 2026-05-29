@@ -17,6 +17,8 @@ spec:
       labels:
         app: honcho-ui
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: honcho-ui
           image: ghcr.io/josephusit/honcho-ui:latest
@@ -28,7 +30,7 @@ spec:
             - name: NODE_ENV
               value: production
             - name: NEXT_PUBLIC_API_BASE
-              value: https://honcho.bouba.ar
+              value: /api/honcho
             - name: NEXT_PUBLIC_WORKSPACE_ID
               value: hermes
             - name: NEXT_PUBLIC_OPERATOR_NAME

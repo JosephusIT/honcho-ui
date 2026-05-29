@@ -1,0 +1,9 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: honcho-api-strip
+  namespace: honcho-ui
+spec:
+  stripPrefix:
+    prefixes:
+      - /api/honcho

@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: honcho-api-proxy
+  namespace: honcho-ui
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+    traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.priority: "100"
+    traefik.ingress.kubernetes.io/router.middlewares: "honcho-ui-honcho-api-strip@kubernetescrd"
+spec:
+  tls:
+    - hosts:
+        - ui.honcho.bouba.ar
+      secretName: honcho-ui-tls
+  rules:
+    - host: ui.honcho.bouba.ar
+      http:
+        paths:
+          - path: /api/honcho
+            pathType: Prefix
+            backend:
+              service:
+                name: honcho-api-proxy
+                port:
+                  number: 8000

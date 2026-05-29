@@ -5,4 +5,8 @@ resources:
   - namespace.yaml
   - deployment.yaml
   - service.yaml
+  - service-honcho-api-proxy.yaml
+  - endpoints-honcho-api-proxy.yaml
+  - middleware-honcho-api-strip.yaml
+  - ingress-honcho-api-proxy.yaml
   - ingress.yaml
