@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { Peer, Representation, Conclusion, Activity } from '@/types';
@@ -73,7 +74,8 @@ export default function PeerDetailPage() {
   }, [peerId]);
 
   useEffect(() => {
-    loadPeer();
+    const handle = requestAnimationFrame(() => loadPeer());
+    return () => cancelAnimationFrame(handle);
   }, [loadPeer]);
 
   if (loading) {
@@ -126,7 +128,7 @@ export default function PeerDetailPage() {
       <div className={styles.profileHeader}>
         <div className={styles.avatarLarge}>
           {peer.avatar
-            ? <img src={peer.avatar} alt={peer.name} className={styles.avatarImg} />
+            ? <Image src={peer.avatar} alt={peer.name} width={64} height={64} className={styles.avatarImg} />
             : <span className={styles.avatarInitials}>{getInitials(peer.name)}</span>
           }
           <span className={`${styles.statusDot} ${styles[peer.status]}`} />

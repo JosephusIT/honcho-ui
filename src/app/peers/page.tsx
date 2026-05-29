@@ -103,7 +103,8 @@ export default function PeersPage() {
   }, []);
 
   useEffect(() => {
-    loadPeers();
+    const handle = requestAnimationFrame(() => loadPeers());
+    return () => cancelAnimationFrame(handle);
   }, [loadPeers]);
 
   return (
