@@ -73,10 +73,8 @@ export default function PeerDetailPage() {
     }
   }, [peerId]);
 
-  useEffect(() => {
-    const handle = requestAnimationFrame(() => loadPeer());
-    return () => cancelAnimationFrame(handle);
-  }, [loadPeer]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void loadPeer(); }, [loadPeer]);
 
   if (loading) {
     return (
