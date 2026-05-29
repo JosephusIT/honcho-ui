@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getSessions } from '@/lib/api';
+import { appConfig, getMissingConfig } from '@/lib/config';
 import styles from './sessions.module.css';
 
-const WORKSPACE = process.env.NEXT_PUBLIC_WORKSPACE_ID ?? 'default';
+const WORKSPACE = appConfig.workspaceId;
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -28,14 +29,6 @@ function formatRelative(iso: string): string {
   return formatDate(iso);
 }
 
-const MOCK_SESSIONS = [
-  { id: 's1', title: 'Memory Systems Research', peer: 'Alice Chen', messages: 142, updatedAt: new Date(Date.now() - 15 * 60000).toISOString() },
-  { id: 's2', title: 'Autonomous Agent Discussion', peer: 'Bob Martinez', messages: 89, updatedAt: new Date(Date.now() - 2 * 3600000).toISOString() },
-  { id: 's3', title: 'ML Infrastructure Planning', peer: 'Carol Wu', messages: 231, updatedAt: new Date(Date.now() - 5 * 3600000).toISOString() },
-  { id: 's4', title: 'Personal AI Assistant Setup', peer: 'David Kim', messages: 67, updatedAt: new Date(Date.now() - 24 * 3600000).toISOString() },
-  { id: 's5', title: 'Agent Memory Architecture', peer: 'Elena Volkov', messages: 198, updatedAt: new Date(Date.now() - 48 * 3600000).toISOString() },
-];
-
 interface SessionItem {
   id: string;
   title: string;
@@ -47,25 +40,31 @@ interface SessionItem {
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
+      if (!WORKSPACE) {
+        setSessions([]);
+        setError(`Missing configuration: ${getMissingConfig().join(', ')}`);
+        return;
+      }
+
       setLoading(true);
+      setError(null);
       try {
         const raw = await getSessions(WORKSPACE);
-        if (raw && raw.length > 0) {
-          setSessions(raw.map((s) => ({
-            id: s.id,
-            title: (s.metadata?.title as string) ?? `Session ${s.id.slice(0, 8)}`,
-            peer: (s.metadata?.peer as string) ?? 'Unknown',
-            messages: (s.metadata?.message_count as number) ?? 0,
-            updatedAt: s.created_at,
-          })));
-        }
-        // API returned empty — show empty state, not fake data
+        setSessions(raw.map((s) => ({
+          id: s.id,
+          title: (s.metadata?.title as string) ?? `Session ${s.id.slice(0, 8)}`,
+          peer: (s.metadata?.peer as string) ?? 'Unknown',
+          messages: (s.metadata?.message_count as number) ?? 0,
+          updatedAt: s.created_at,
+        })));
       } catch (err) {
-        console.warn('[SessionsPage] API unavailable, using mock data:', err);
-        setSessions(MOCK_SESSIONS);
+        console.warn('[SessionsPage] Failed to load sessions:', err);
+        setSessions([]);
+        setError(err instanceof Error ? err.message : 'Failed to load sessions.');
       } finally {
         setLoading(false);
       }
@@ -83,6 +82,18 @@ export default function SessionsPage() {
           </p>
         </div>
       </div>
+
+      {error && (
+        <div className={styles.item}>
+          <div className={styles.itemIcon}>⚠️</div>
+          <div className={styles.itemContent}>
+            <h3 className={styles.itemTitle}>Unable to load sessions</h3>
+            <div className={styles.itemMeta}>
+              <span>{error}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className={styles.list}>
         {sessions.map((session) => (

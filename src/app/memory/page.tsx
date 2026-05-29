@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { getPeers, getConclusions } from '@/lib/api';
+import { appConfig, getMissingConfig } from '@/lib/config';
 import styles from './memory.module.css';
 
-const WORKSPACE = process.env.NEXT_PUBLIC_WORKSPACE_ID ?? 'default';
+const WORKSPACE = appConfig.workspaceId;
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -25,10 +26,19 @@ interface MemoryItem {
 export default function MemoryPage() {
   const [items, setItems] = useState<MemoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
+      if (!WORKSPACE) {
+        setItems([]);
+        setError(`Missing configuration: ${getMissingConfig().join(', ')}`);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
+      setError(null);
       try {
         const [peers, conclusions] = await Promise.all([
           getPeers(WORKSPACE),
@@ -44,8 +54,9 @@ export default function MemoryPage() {
         }));
         memItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setItems(memItems);
-      } catch {
-        // keep empty
+      } catch (err) {
+        setItems([]);
+        setError(err instanceof Error ? err.message : 'Failed to load memory.');
       } finally {
         setLoading(false);
       }
@@ -64,7 +75,14 @@ export default function MemoryPage() {
         </div>
       </div>
 
-      {items.length === 0 && !loading ? (
+      {error && (
+        <div className={styles.empty}>
+          <span className={styles.emptyIcon}>⚠️</span>
+          <p className={styles.emptyText}>{error}</p>
+        </div>
+      )}
+
+      {items.length === 0 && !loading && !error ? (
         <div className={styles.empty}>
           <span className={styles.emptyIcon}>🧠</span>
           <p className={styles.emptyText}>No memories yet. Interact with peers to build persistent context.</p>

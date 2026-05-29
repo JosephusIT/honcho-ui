@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { appConfig } from '@/lib/config';
 import styles from './settings.module.css';
 
 export default function SettingsPage() {
@@ -28,10 +29,11 @@ export default function SettingsPage() {
               id="workspace"
               className={styles.input}
               type="text"
-              defaultValue={process.env.NEXT_PUBLIC_WORKSPACE_ID ?? 'default'}
+              defaultValue={appConfig.workspaceId}
               placeholder="your-workspace-id"
+              readOnly
             />
-            <span className={styles.hint}>Used to authenticate with the Honcho API</span>
+            <span className={styles.hint}>Read from NEXT_PUBLIC_WORKSPACE_ID at build/deploy time</span>
           </div>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="api-base">API Base URL</label>
@@ -39,10 +41,11 @@ export default function SettingsPage() {
               id="api-base"
               className={styles.input}
               type="url"
-              defaultValue={process.env.NEXT_PUBLIC_API_BASE ?? 'https://honcho.bouba.ar'}
+              defaultValue={appConfig.apiBase}
               placeholder="https://honcho.example.com"
+              readOnly
             />
-            <span className={styles.hint}>Base URL for the Honcho v3 API</span>
+            <span className={styles.hint}>Read from NEXT_PUBLIC_API_BASE at build/deploy time</span>
           </div>
         </section>
 

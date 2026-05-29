@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Peer, StatusFilter } from '@/types';
 import { PeerGrid } from '@/components/features/PeerGrid';
 import { getPeers, toPeer } from '@/lib/api';
+import { appConfig, getMissingConfig } from '@/lib/config';
 import styles from './peers.module.css';
 
-const WORKSPACE = process.env.NEXT_PUBLIC_WORKSPACE_ID ?? 'default';
+const WORKSPACE = appConfig.workspaceId;
 
 const FILTERS: { label: string; value: StatusFilter }[] = [
   { label: 'All', value: 'all' },
@@ -15,90 +16,28 @@ const FILTERS: { label: string; value: StatusFilter }[] = [
   { label: 'Offline', value: 'offline' },
 ];
 
-// Graceful fallback — keep mock data for demo / offline use
-// BUT: only use mock if API call actually failed. Empty results from API are still real data.
-const MOCK_PEERS: Peer[] = [
-  {
-    id: 'p_alice',
-    name: 'Alice Chen',
-    status: 'online' as const,
-    joinedAt: '2025-03-15T10:00:00Z',
-    modelsOwned: 4,
-    representationCount: 12,
-    bio: 'AI researcher focused on memory systems.',
-    lastSeen: new Date().toISOString(),
-  },
-  {
-    id: 'p_bob',
-    name: 'Bob Martinez',
-    status: 'away',
-    joinedAt: '2025-01-20T14:30:00Z',
-    modelsOwned: 2,
-    representationCount: 8,
-    bio: 'Product lead exploring autonomous agents.',
-    lastSeen: new Date(Date.now() - 25 * 60000).toISOString(),
-  },
-  {
-    id: 'p_carol',
-    name: 'Carol Wu',
-    status: 'offline',
-    joinedAt: '2024-11-05T09:15:00Z',
-    modelsOwned: 6,
-    representationCount: 23,
-    bio: 'ML infrastructure engineer.',
-    lastSeen: new Date(Date.now() - 2 * 3600000).toISOString(),
-  },
-  {
-    id: 'p_david',
-    name: 'David Kim',
-    status: 'online',
-    joinedAt: '2025-02-28T16:45:00Z',
-    modelsOwned: 3,
-    representationCount: 7,
-    bio: 'Building personal AI assistants.',
-    lastSeen: new Date().toISOString(),
-  },
-  {
-    id: 'p_elena',
-    name: 'Elena Volkov',
-    status: 'offline',
-    joinedAt: '2024-09-10T11:00:00Z',
-    modelsOwned: 5,
-    representationCount: 19,
-    bio: 'Research scientist.',
-    lastSeen: new Date(Date.now() - 5 * 3600000).toISOString(),
-  },
-  {
-    id: 'p_felix',
-    name: 'Felix Okonkwo',
-    status: 'away',
-    joinedAt: '2025-04-01T08:00:00Z',
-    modelsOwned: 1,
-    representationCount: 4,
-    bio: 'DevOps engineer experimenting with AI agents.',
-    lastSeen: new Date(Date.now() - 45 * 60000).toISOString(),
-  },
-];
-
 export default function PeersPage() {
   const [filter, setFilter] = useState<StatusFilter>('all');
-  const [peers, setPeers] = useState<Peer[]>(MOCK_PEERS);
+  const [peers, setPeers] = useState<Peer[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadPeers = useCallback(async () => {
+    if (!WORKSPACE) {
+      setPeers([]);
+      setError(`Missing configuration: ${getMissingConfig().join(', ')}`);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
       const raw = await getPeers(WORKSPACE);
-      if (raw && raw.length > 0) {
-        setPeers(raw.map(toPeer));
-      }
-      // API returned empty — show empty state, not fake data
+      setPeers(raw.map(toPeer));
     } catch (err) {
-      // API unavailable — fall back to mock data (dev / offline mode only)
-      console.warn('[PeersPage] API unavailable, using mock data:', err);
-      setPeers(MOCK_PEERS);
+      console.warn('[PeersPage] Failed to load peers:', err);
+      setPeers([]);
+      setError(err instanceof Error ? err.message : 'Failed to load peers.');
     } finally {
       setLoading(false);
     }
@@ -119,7 +58,7 @@ export default function PeersPage() {
         <button
           className={styles.refreshBtn}
           onClick={loadPeers}
-          disabled={loading}
+          disabled={loading || !WORKSPACE}
           title="Refresh peers"
         >
           <svg
@@ -140,7 +79,7 @@ export default function PeersPage() {
       {error && (
         <div className={styles.errorBanner}>
           <span>{error}</span>
-          <button onClick={loadPeers}>Retry</button>
+          {WORKSPACE && <button onClick={loadPeers}>Retry</button>}
         </div>
       )}
 

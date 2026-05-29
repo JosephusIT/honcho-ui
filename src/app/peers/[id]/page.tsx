@@ -6,10 +6,11 @@ import { useParams, useRouter } from 'next/navigation';
 import type { Peer, Representation, Conclusion, Activity } from '@/types';
 import { RepresentationList } from '@/components/features/RepresentationList';
 import { ActivityTimeline } from '@/components/features/ActivityTimeline';
-import { getPeer, toPeer } from '@/lib/api';
+import { getConclusions, getPeer, getPeerCard, getPeerContext, toPeer } from '@/lib/api';
+import { appConfig, getMissingConfig } from '@/lib/config';
 import styles from './peerDetail.module.css';
 
-const WORKSPACE = process.env.NEXT_PUBLIC_WORKSPACE_ID ?? 'default';
+const WORKSPACE = appConfig.workspaceId;
 
 type Tab = 'representations' | 'conclusions' | 'activity';
 
@@ -21,35 +22,6 @@ function getInitials(name: string): string {
   return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
 }
 
-const MOCK_REPRESENTATIONS: Representation[] = [
-  {
-    id: 'r1', peerId: 'p_alice', peerName: 'Alice Chen',
-    context: 'Alice prefers concise responses. She works in AI research and often asks about memory systems.',
-    createdAt: '2025-03-20T10:00:00Z', updatedAt: '2025-04-01T14:00:00Z',
-    sessionCount: 14, lastActive: '2025-05-25T09:00:00Z',
-  },
-  {
-    id: 'r2', peerId: 'p_alice', peerName: 'Alice Chen',
-    context: 'Alice is working on a paper about persistent memory in LLMs. She values technical depth.',
-    createdAt: '2025-04-10T11:00:00Z', updatedAt: '2025-05-20T16:00:00Z',
-    sessionCount: 8,
-  },
-];
-
-const MOCK_CONCLUSIONS: Conclusion[] = [
-  { id: 'c1', peerId: 'p_alice', content: 'Alice prefers technical, detailed explanations over high-level summaries.', createdAt: '2025-04-01T10:00:00Z' },
-  { id: 'c2', peerId: 'p_alice', content: 'Works best with explicit context windows and memory persistence.', createdAt: '2025-04-15T14:00:00Z' },
-  { id: 'c3', peerId: 'p_alice', content: 'Interested in autonomous agent workflows and long-horizon tasks.', createdAt: '2025-05-01T09:00:00Z' },
-];
-
-const MOCK_ACTIVITY: Activity[] = [
-  { id: 'a1', peerId: 'p_alice', type: 'session', description: 'Started a new session on memory systems research', timestamp: '2025-05-25T09:00:00Z' },
-  { id: 'a2', peerId: 'p_alice', type: 'representation', description: 'Updated representation: context preferences', timestamp: '2025-05-20T16:00:00Z' },
-  { id: 'a3', peerId: 'p_alice', type: 'conclusion', description: 'Added conclusion about autonomous agents', timestamp: '2025-05-01T09:00:00Z' },
-  { id: 'a4', peerId: 'p_alice', type: 'settings', description: 'Updated notification preferences', timestamp: '2025-04-28T11:00:00Z' },
-  { id: 'a5', peerId: 'p_alice', type: 'session', description: 'Explored persistent memory architectures', timestamp: '2025-04-20T14:00:00Z' },
-];
-
 export default function PeerDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -58,16 +30,104 @@ export default function PeerDetailPage() {
   const [peer, setPeer] = useState<Peer | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('representations');
+  const [representations, setRepresentations] = useState<Representation[]>([]);
+  const [conclusions, setConclusions] = useState<Conclusion[]>([]);
+  const [activity, setActivity] = useState<Activity[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const loadPeer = useCallback(async () => {
+    if (!WORKSPACE) {
+      setPeer(null);
+      setRepresentations([]);
+      setConclusions([]);
+      setActivity([]);
+      setError(`Missing configuration: ${getMissingConfig().join(', ')}`);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
+    setError(null);
     try {
-      const raw = await getPeer(WORKSPACE, peerId);
-      if (raw !== null) {
-        setPeer(toPeer(raw));
+      const [rawPeer, context, card, allConclusions] = await Promise.all([
+        getPeer(WORKSPACE, peerId),
+        getPeerContext(WORKSPACE, peerId).catch(() => null),
+        getPeerCard(WORKSPACE, peerId).catch(() => null),
+        getConclusions(WORKSPACE).catch(() => []),
+      ]);
+
+      if (rawPeer === null) {
+        setPeer(null);
+        setRepresentations([]);
+        setConclusions([]);
+        setActivity([]);
+        return;
       }
-    } catch {
-      // Unknown peer — stay null and show not-found
+
+      const nextPeer = toPeer(rawPeer);
+      const representationItems: Representation[] = [];
+
+      if (context?.representation) {
+        representationItems.push({
+          id: `${peerId}-context`,
+          peerId,
+          peerName: nextPeer.name,
+          context: context.representation,
+          createdAt: nextPeer.joinedAt,
+          updatedAt: nextPeer.joinedAt,
+          sessionCount: 0,
+          lastActive: nextPeer.lastSeen,
+        });
+      }
+
+      for (const [index, line] of (card?.peer_card ?? []).entries()) {
+        representationItems.push({
+          id: `${peerId}-card-${index}`,
+          peerId,
+          peerName: nextPeer.name,
+          context: line,
+          createdAt: nextPeer.joinedAt,
+          updatedAt: nextPeer.joinedAt,
+          sessionCount: 0,
+          lastActive: nextPeer.lastSeen,
+        });
+      }
+
+      const peerConclusions = allConclusions.filter((item) => item.peerId === peerId);
+      const nextActivity: Activity[] = [
+        {
+          id: `${peerId}-created`,
+          peerId,
+          type: 'settings' as const,
+          description: 'Peer record created',
+          timestamp: nextPeer.joinedAt,
+        },
+        ...representationItems.map((item) => ({
+          id: `${item.id}-activity`,
+          peerId,
+          type: 'representation' as const,
+          description: item.context,
+          timestamp: item.updatedAt,
+        })),
+        ...peerConclusions.map((item) => ({
+          id: `${item.id}-activity`,
+          peerId,
+          type: 'conclusion' as const,
+          description: item.content,
+          timestamp: item.createdAt,
+        })),
+      ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      setPeer(nextPeer);
+      setRepresentations(representationItems);
+      setConclusions(peerConclusions);
+      setActivity(nextActivity);
+    } catch (err) {
+      setPeer(null);
+      setRepresentations([]);
+      setConclusions([]);
+      setActivity([]);
+      setError(err instanceof Error ? err.message : 'Failed to load peer details.');
     } finally {
       setLoading(false);
     }
@@ -100,8 +160,8 @@ export default function PeerDetailPage() {
           Peers
         </button>
         <div className={styles.notFound}>
-          <h2>Peer not found</h2>
-          <p>This peer does not exist in this workspace.</p>
+          <h2>{error ? 'Unable to load peer' : 'Peer not found'}</h2>
+          <p>{error ?? 'This peer does not exist in this workspace.'}</p>
           <button className={styles.btnPrimary} onClick={() => router.push('/peers')}>
             Back to Peers
           </button>
@@ -109,10 +169,6 @@ export default function PeerDetailPage() {
       </div>
     );
   }
-
-  const representations = MOCK_REPRESENTATIONS.filter((r) => r.peerId === peerId);
-  const conclusions = MOCK_CONCLUSIONS.filter((c) => c.peerId === peerId);
-  const activity = MOCK_ACTIVITY.filter((a) => a.peerId === peerId);
 
   return (
     <div className={styles.page}>

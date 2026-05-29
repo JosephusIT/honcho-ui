@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { appConfig } from '@/lib/config';
 import styles from './Sidebar.module.css';
 
 const navItems = [
@@ -61,6 +62,10 @@ const navItems = [
   },
 ];
 
+function getAvatarLetter(name: string): string {
+  return name.trim().charAt(0).toUpperCase() || 'H';
+}
+
 export function Sidebar() {
   const pathname = usePathname();
 
@@ -102,10 +107,10 @@ export function Sidebar() {
 
       <div className={styles.footer}>
         <div className={styles.userCard}>
-          <div className={styles.userAvatar}>F</div>
+          <div className={styles.userAvatar}>{getAvatarLetter(appConfig.operatorName)}</div>
           <div className={styles.userInfo}>
-            <span className={styles.userName}>Facundo</span>
-            <span className={styles.userRole}>Admin</span>
+            <span className={styles.userName}>{appConfig.operatorName}</span>
+            <span className={styles.userRole}>{appConfig.operatorRole}</span>
           </div>
         </div>
       </div>

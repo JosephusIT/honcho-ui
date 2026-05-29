@@ -29,6 +29,10 @@ spec:
               value: "https://honcho.bouba.ar"
             - name: NEXT_PUBLIC_WORKSPACE_ID
               value: "hermes"
+            - name: NEXT_PUBLIC_OPERATOR_NAME
+              value: "Honcho Admin"
+            - name: NEXT_PUBLIC_OPERATOR_ROLE
+              value: "Platform operator"
           resources:
             requests:
               cpu: 100m

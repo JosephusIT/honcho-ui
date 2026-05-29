@@ -1,12 +1,17 @@
 import type { Peer, Conclusion } from '@/types';
+import { appConfig } from './config';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+const API_BASE = appConfig.apiBase;
 
 function url(path: string): string {
   return API_BASE.endsWith('/') ? API_BASE + path.slice(1) : API_BASE + path;
 }
 
 async function handle<T>(path: string, init?: RequestInit): Promise<T> {
+  if (!API_BASE) {
+    throw new Error('Missing NEXT_PUBLIC_API_BASE configuration.');
+  }
+
   const res = await fetch(url(path), {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
